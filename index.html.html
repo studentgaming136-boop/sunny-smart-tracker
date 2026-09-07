@@ -2,87 +2,728 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Updated App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sunny Smart Tracker - Ultra Pro</title>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
-        header { background-color: #007bff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .container { padding: 20px; max-width: 800px; margin: auto; }
-        .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
-        button:hover { background-color: #218838; }
-        .loader { text-align: center; font-size: 18px; color: #555; margin-top: 20px; }
+        :root {
+            --bg-body: #060913;
+            --bg-card: #0f172a;
+            --border-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-red: #f43f5e;
+            --accent-yellow: #fbbf24;
+            --accent-blue: #38bdf8;
+            --accent-purple: #c084fc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-primary); padding: 16px; max-width: 520px; margin: 0 auto; padding-bottom: 60px; }
+
+        .header { text-align: center; padding: 20px 0; }
+        .header h1 { font-size: 26px; font-weight: 900; background: linear-gradient(to right, #38bdf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .user-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-card); padding: 12px 18px; border-radius: 14px; font-size: 13px; margin-bottom: 16px; }
+
+        .grid-dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border-card); border-radius: 18px; padding: 18px; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+        .card-full { grid-column: span 2; }
+        .card-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 8px; }
+        .card-val { font-size: 24px; font-weight: 800; color: #ffffff; }
+
+        .progress-track { width: 100%; background-color: #1e293b; height: 10px; border-radius: 6px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(to right, var(--accent-blue), var(--accent-purple)); width: 0%; transition: width 0.4s ease; }
+
+        .timer-box { background-color: var(--bg-card); border: 2px solid var(--accent-purple); border-radius: 20px; padding: 22px; text-align: center; margin-bottom: 16px; box-shadow: 0 8px 25px rgba(192, 132, 252, 0.15); }
+        select.subject-dropdown { width: 100%; padding: 14px; background-color: #060913; color: #ffffff; border: 1px solid var(--border-card); border-radius: 12px; margin-bottom: 16px; font-size: 15px; outline: none; }
+        .timer-screen { font-size: 46px; font-weight: 900; font-family: monospace; margin: 12px 0 18px 0; color: #f8fafc; letter-spacing: 2px; }
+
+        .btn-row { display: flex; gap: 12px; }
+        .btn-action { flex: 1; padding: 14px; border: none; border-radius: 12px; font-weight: 700; color: white; cursor: pointer; font-size: 14px; }
+        .btn-start { background-color: var(--accent-green); }
+        .btn-pause { background-color: var(--accent-yellow); color: #060913; }
+        .btn-stop { background-color: var(--accent-red); }
+
+        .section-box { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 18px; padding: 18px; margin-bottom: 16px; }
+        .list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
+        .list-item:last-child { border-bottom: none; }
+        
+        .btn-chart { background: var(--accent-blue); color: #060913; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer; margin-left: 6px; }
+        canvas { background: #060913; border-radius: 12px; margin-top: 12px; padding: 10px; }
+        
+        .picker-box { background: #060913; color: white; border: 1px solid var(--border-card); padding: 8px 12px; border-radius: 10px; font-size: 12px; outline: none; }
+        .btn-google-sm { background: #ea4335; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h2>मेरा ऐप</h2>
-        <div>
-            <span id="userStatus" style="margin-right: 15px;">Guest Mode</span>
-            <button id="loginBtn" onclick="toggleLogin()">Login</button>
-        </div>
-    </header>
+    <!-- Header -->
+    <div class="header">
+        <h1>Sunny Smart Tracker</h1>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Ultimate Edition (Guest / Cloud Mode)</p>
+    </div>
 
-    <div class="container">
-        <div id="loader" class="loader">डेटा लोड हो रहा है...</div>
-        <div id="dataContainer" style="display: none;">
-            <h3>उपलब्ध डेटा (Daily Use Data)</h3>
-            <div id="contentList"></div>
+    <!-- User / Auth Bar -->
+    <div class="user-bar" id="userBarContainer">
+        <span id="userInfoText" style="font-weight: 600; color: var(--accent-yellow);">Mode: Guest (Local Storage)</span>
+        <div id="authBtnWrapper">
+            <button class="btn-google-sm" onclick="loginWithGoogle()">Sign In with Google</button>
+        </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="grid-dashboard">
+        <div class="card">
+            <div class="card-label">Aaj Ka Time</div>
+            <div class="card-val" id="dashToday">0h 0m</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Daily Streak</div>
+            <div class="card-val" id="dashStreak">🔥 0 Days</div>
+        </div>
+
+        <!-- Library In/Out Attendance Card -->
+        <div class="card card-full" style="background: linear-gradient(135deg, #0f172a, #132238); border-left: 5px solid var(--accent-green);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                    <div class="card-label">🏛️ Library In / Out Status</div>
+                    <div id="attendanceStatus" style="font-size: 14px; font-weight: bold; color: var(--accent-yellow); margin-top: 4px;">Not Checked In</div>
+                </div>
+                <div id="attBtnContainer">
+                    <button onclick="libraryCheckIn()" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>
+                </div>
+            </div>
+            <div id="libraryTimingInfo" style="font-size: 11px; color: var(--text-secondary);">In: -- | Out: --</div>
+        </div>
+
+        <!-- Exam Target Countdown -->
+        <div class="card card-full">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span class="card-label">🎯 Exam Countdown</span>
+                <input type="date" id="examDatePicker" onchange="saveExamTarget()" class="picker-box">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="examNameText" style="font-size: 13px; color: var(--text-secondary);">Target Date ➔</span>
+                <span id="daysRemaining" style="font-size: 16px; font-weight: 800; color: var(--accent-yellow);">-- Days Left</span>
+            </div>
+        </div>
+
+        <!-- Daily Target Hours -->
+        <div class="card card-full">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="card-label">Daily Target Hours</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="targetHoursInput" min="1" max="24" value="6" style="width: 50px; background: #060913; color: white; border: 1px solid var(--border-card); padding: 6px; border-radius: 8px; font-size: 13px; text-align: center; outline: none;">
+                    <button onclick="saveDailyTarget()" style="background: var(--accent-blue); color: #060913; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">Set</button>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
+                <span id="targetText" style="font-size: 12px; color: var(--accent-blue);">Target: 6 hrs</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="targetBar"></div></div>
+        </div>
+    </div>
+
+    <!-- Timer Box -->
+    <div class="timer-box">
+        <select id="subjectSelect" class="subject-dropdown">
+            <option value="Maths">📐 Maths</option>
+            <option value="Reasoning">🧩 Reasoning</option>
+            <option value="English">📖 English</option>
+            <option value="GK/GS">🌍 GK/GS</option>
+            <option value="Computer">💻 Computer</option>
+        </select>
+        <div class="timer-screen" id="timerDisplay">00:00:00</div>
+        <div class="btn-row">
+            <button class="btn-action btn-start" id="startBtn" onclick="startTimer()">START</button>
+            <button class="btn-action btn-pause" id="pauseBtn" onclick="pauseTimer()" disabled>PAUSE</button>
+            <button class="btn-action btn-stop" id="stopBtn" onclick="stopTimer()" disabled>STOP</button>
+        </div>
+    </div>
+
+    <!-- Charts & Analytics -->
+    <div class="section-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="card-label">📊 Analytics</span>
+            <div>
+                <button class="btn-chart" onclick="showBarChart()">15 Days</button>
+                <button class="btn-chart" onclick="showPieChart()" style="background: var(--accent-purple); color: white;">Subjects</button>
+            </div>
+        </div>
+        <canvas id="studyChart" height="190"></canvas>
+    </div>
+
+    <!-- Last 15 Days Study History -->
+    <div class="section-box">
+        <div class="card-label" style="margin-bottom: 10px;">📅 Last 15 Days Study Record</div>
+        <div id="last15DaysList" style="max-height: 180px; overflow-y: auto;">
+            <div class="list-item"><span>Loading records...</span><span>-</span></div>
+        </div>
+    </div>
+
+    <!-- Last 7 Days Library In/Out Attendance -->
+    <div class="section-box">
+        <div class="card-label" style="margin-bottom: 10px;">🏛️ Last 7 Days Library Attendance & Timings</div>
+        <div id="last7DaysAttendanceList" style="max-height: 180px; overflow-y: auto;">
+            <div class="list-item"><span>Loading attendance...</span><span>-</span></div>
+        </div>
+    </div>
+
+    <!-- Month-wise Library Attendance Archive -->
+    <div class="section-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span class="card-label">📂 Month Attendance Archive</span>
+            <input type="month" id="attArchiveMonthPicker" onchange="loadMonthlyAttendanceArchive()" class="picker-box">
+        </div>
+        <div id="attMonthlyArchiveResult" style="font-size: 13px; color: var(--text-secondary);">Select a month above to view total library presence.</div>
+    </div>
+
+    <!-- Subject-wise Month Study Archive -->
+    <div class="section-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span class="card-label">📂 Subject-wise Month Study</span>
+            <input type="month" id="studyArchiveMonthPicker" onchange="loadMonthlyStudyArchive()" class="picker-box">
+        </div>
+        <div id="studyMonthlyArchiveResult" style="font-size: 13px; color: var(--text-secondary);">Select a month above to view subject breakdown.</div>
+    </div>
+
+    <!-- Global Leaderboard -->
+    <div class="section-box">
+        <div class="card-label" style="margin-bottom: 10px;">🏆 Weekly Top Students</div>
+        <div id="leaderboardList">
+            <div class="list-item"><span>1. Loading...</span><span>0h</span></div>
         </div>
     </div>
 
     <script>
-        // सिम्युलेटेड डेटा (इसे आप अपने API या Database से बदल सकते हैं)
-        const mockData = [
-            { id: 1, title: "दैनिक अपडेट 1", desc: "यह डेटा बिना लॉगिन के भी दिखाई दे रहा है।" },
-            { id: 2, title: "दैनिक अपडेट 2", desc: "आप इसे रोज आसानी से इस्तेमाल कर सकते हैं।" },
-            { id: 3, title: "महत्वपूर्ण जानकारी", desc: "लॉगिन करने पर आपको अतिरिक्त फीचर्स मिल सकते हैं।" }
-        ];
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
+            authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
+            projectId: "sunny-smart-tracker-73c04",
+            storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
+            messagingSenderId: "1049812610355",
+            appId: "1:1049812610355:web:e1859969900334680f6246"
+        };
 
-        let isLoggedIn = false;
+        firebase.initializeApp(firebaseConfig);
+        firebase.auth().setPersistence(firebase.auth.Auth.persistence.LOCAL);
 
-        function loadAppData() {
-            const loader = document.getElementById('loader');
-            const dataContainer = document.getElementById('dataContainer');
-            const contentList = document.getElementById('contentList');
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-            // लोडिंग इश्यू को फिक्स करने के लिए यहाँ टिमआउट या फेच का इस्तेमाल किया गया है
-            setTimeout(() => {
-                loader.style.display = 'none';
-                dataContainer.style.display = 'block';
+        let currentUser = null;
+        let timerInterval = null;
+        let myChartInstance = null;
+        let cachedSessions = [];
+        let cachedAttendance = {};
 
-                // डेटा रेंडर करना
-                contentList.innerHTML = '';
-                mockData.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `<h4>${item.title}</h4><p>${item.desc}</p>`;
-                    contentList.appendChild(card);
-                });
-            }, 500); // तुरंत और स्मूथ लोडिंग के लिए
+        function getTimerState() {
+            return {
+                isRunning: localStorage.getItem('sunny_isRunning') === 'true',
+                startTime: parseInt(localStorage.getItem('sunny_startTime') || '0', 10),
+                accumulatedSec: parseInt(localStorage.getItem('sunny_accumulatedSec') || '0', 10),
+                isPaused: localStorage.getItem('sunny_isPaused') === 'true',
+                subject: localStorage.getItem('sunny_subject') === null ? 'Maths' : localStorage.getItem('sunny_subject')
+            };
         }
 
-        function toggleLogin() {
-            isLoggedIn = !isLoggedIn;
-            const userStatus = document.getElementById('userStatus');
-            const loginBtn = document.getElementById('loginBtn');
+        function saveTimerState(state) {
+            localStorage.setItem('sunny_isRunning', state.isRunning);
+            localStorage.setItem('sunny_startTime', state.startTime);
+            localStorage.setItem('sunny_accumulatedSec', state.accumulatedSec);
+            localStorage.setItem('sunny_isPaused', state.isPaused);
+            localStorage.setItem('sunny_subject', state.subject);
+        }
 
-            if (isLoggedIn) {
-                userStatus.innerText = "Welcome, User!";
-                loginBtn.innerText = "Logout";
-                alert("सफलतापूर्वक लॉगिन हो गया!");
+        auth.onAuthStateChanged(user => {
+            const userInfoText = document.getElementById('userInfoText');
+            const authBtnWrapper = document.getElementById('authBtnWrapper');
+
+            if (user) {
+                currentUser = user;
+                userInfoText.innerText = user.displayName || user.email;
+                userInfoText.style.color = "var(--accent-green)";
+                authBtnWrapper.innerHTML = `<button onclick="logout()" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer; font-weight:bold; font-size:12px;">Logout</button>`;
+                loadAllUserData();
             } else {
-                userStatus.innerText = "Guest Mode";
-                loginBtn.innerText = "Login";
-                alert("लॉगआउट हो गए हैं। (डेटा फिर भी दिखाई देता रहेगा)");
+                currentUser = null;
+                userInfoText.innerText = "Mode: Guest (Local Storage)";
+                userInfoText.style.color = "var(--accent-yellow)";
+                authBtnWrapper.innerHTML = `<button class="btn-google-sm" onclick="loginWithGoogle()">Sign In with Google</button>`;
+                loadAllUserData();
+            }
+            fetchLeaderboard();
+            checkAndRestoreTimer();
+        });
+
+        function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => {
+                alert("Login failed: " + error.message);
+            });
+        }
+
+        function logout() { 
+            auth.signOut().then(() => {
+                location.reload();
+            }); 
+        }
+
+        function checkAndRestoreTimer() {
+            const state = getTimerState();
+            if (state.isRunning && !state.isPaused) {
+                document.getElementById('subjectSelect').value = state.subject;
+                document.getElementById('subjectSelect').disabled = true;
+                runLoop();
+                toggleControls(true);
+            } else if (state.isPaused) {
+                document.getElementById('subjectSelect').value = state.subject;
+                document.getElementById('subjectSelect').disabled = true;
+                let current = state.accumulatedSec;
+                document.getElementById('timerDisplay').innerText = formatHHMMSS(current);
+                toggleControls(false, true);
             }
         }
 
-        // ऐप शुरू होने पर डेटा लोड करें
-        window.onload = function() {
-            loadAppData();
-        };
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                const state = getTimerState();
+                if (state.isRunning && !state.isPaused) {
+                    runLoop();
+                }
+            }
+        });
+
+        function startTimer() {
+            let state = getTimerState();
+            if (!state.isRunning) {
+                state.subject = document.getElementById('subjectSelect').value;
+                state.startTime = Date.now();
+                state.isRunning = true;
+                state.isPaused = false;
+                state.accumulatedSec = state.accumulatedSec || 0;
+                saveTimerState(state);
+            } else if (state.isPaused) {
+                state.startTime = Date.now();
+                state.isPaused = false;
+                state.isRunning = true;
+                saveTimerState(state);
+            }
+
+            document.getElementById('subjectSelect').disabled = true;
+            runLoop();
+            toggleControls(true);
+        }
+
+        function pauseTimer() {
+            let state = getTimerState();
+            if (state.isRunning && !state.isPaused) {
+                const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+                state.accumulatedSec += elapsed;
+                state.isPaused = true;
+                state.isRunning = false;
+                state.startTime = 0;
+                saveTimerState(state);
+            }
+            clearInterval(timerInterval);
+            toggleControls(false, true);
+        }
+
+        function stopTimer() {
+            let state = getTimerState();
+            let totalSec = state.accumulatedSec;
+            if (state.isRunning && !state.isPaused && state.startTime) {
+                totalSec += Math.floor((Date.now() - state.startTime) / 1000);
+            }
+
+            if (totalSec > 5) {
+                saveSessionData(totalSec, state.subject);
+            }
+
+            localStorage.removeItem('sunny_isRunning');
+            localStorage.removeItem('sunny_startTime');
+            localStorage.removeItem('sunny_accumulatedSec');
+            localStorage.removeItem('sunny_isPaused');
+            localStorage.removeItem('sunny_subject');
+
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').innerText = "00:00:00";
+            document.getElementById('subjectSelect').disabled = false;
+            toggleControls(false);
+        }
+
+        function runLoop() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let state = getTimerState();
+                if (state.isRunning && !state.isPaused && state.startTime) {
+                    let current = state.accumulatedSec + Math.floor((Date.now() - state.startTime) / 1000);
+                    document.getElementById('timerDisplay').innerText = formatHHMMSS(current);
+                }
+            }, 1000);
+        }
+
+        function toggleControls(running, paused = false) {
+            document.getElementById('startBtn').disabled = running;
+            document.getElementById('pauseBtn').disabled = !running;
+            document.getElementById('stopBtn').disabled = !running && !paused;
+        }
+
+        function libraryCheckIn() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const attData = {
+                checkIn: nowTime,
+                checkOut: null,
+                present: true,
+                timestamp: Date.now()
+            };
+
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set(attData, { merge: true }).then(() => {
+                    loadAllUserData();
+                });
+            } else {
+                let localAtt = JSON.parse(localStorage.getItem('guest_attendance') || '{}');
+                localAtt[todayStr] = attData;
+                localStorage.setItem('guest_attendance', JSON.stringify(localAtt));
+                loadAllUserData();
+            }
+        }
+
+        function libraryCheckOut() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set({
+                    checkOut: nowTime
+                }, { merge: true }).then(() => {
+                    loadAllUserData();
+                });
+            } else {
+                let localAtt = JSON.parse(localStorage.getItem('guest_attendance') || '{}');
+                if (localAtt[todayStr]) {
+                    localAtt[todayStr].checkOut = nowTime;
+                    localStorage.setItem('guest_attendance', JSON.stringify(localAtt));
+                }
+                loadAllUserData();
+            }
+        }
+
+        function loadAllUserData() {
+            const customTargetHrs = localStorage.getItem('userDailyTargetHrs') || 6;
+            document.getElementById('targetHoursInput').value = customTargetHrs;
+            document.getElementById('targetText').innerText = `Target: ${customTargetHrs} hrs`;
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).collection('attendance').get().then(snapshot => {
+                    cachedAttendance = {};
+                    snapshot.forEach(doc => { cachedAttendance[doc.id] = doc.data(); });
+                    processAttendanceUI(todayStr);
+                }).catch(() => {
+                    cachedAttendance = {};
+                    processAttendanceUI(todayStr);
+                });
+
+                db.collection('users').doc(currentUser.uid).collection('sessions').orderBy('timestamp', 'desc').get().then(snapshot => {
+                    cachedSessions = [];
+                    snapshot.forEach(doc => { cachedSessions.push(doc.data()); });
+                    processSessionsUI(todayStr, customTargetHrs);
+                }).catch(() => {
+                    cachedSessions = [];
+                    processSessionsUI(todayStr, customTargetHrs);
+                });
+            } else {
+                cachedAttendance = JSON.parse(localStorage.getItem('guest_attendance') || '{}');
+                processAttendanceUI(todayStr);
+
+                cachedSessions = JSON.parse(localStorage.getItem('guest_sessions') || '[]');
+                processSessionsUI(todayStr, customTargetHrs);
+            }
+
+            const savedExamDate = localStorage.getItem('userExamDate');
+            if (savedExamDate) {
+                document.getElementById('examDatePicker').value = savedExamDate;
+                calculateDaysLeft(savedExamDate);
+            }
+        }
+
+        function processAttendanceUI(todayStr) {
+            const todayData = cachedAttendance[todayStr];
+            const btnContainer = document.getElementById('attBtnContainer');
+            const statusEl = document.getElementById('attendanceStatus');
+            const infoEl = document.getElementById('libraryTimingInfo');
+
+            if (!todayData || !todayData.checkIn) {
+                statusEl.innerText = "Not Checked In Today";
+                statusEl.style.color = "var(--accent-yellow)";
+                btnContainer.innerHTML = `<button onclick="libraryCheckIn()" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>`;
+                infoEl.innerText = `In: -- | Out: --`;
+            } else if (todayData.checkIn && !todayData.checkOut) {
+                statusEl.innerText = "🟢 Currently In Library";
+                statusEl.style.color = "var(--accent-green)";
+                btnContainer.innerHTML = `<button onclick="libraryCheckOut()" style="background: var(--accent-red); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check Out</button>`;
+                infoEl.innerText = `In Time: ${todayData.checkIn} | Out: Ongoing...`;
+            } else {
+                statusEl.innerText = "✅ Checked Out for Today";
+                statusEl.style.color = "var(--accent-blue)";
+                btnContainer.innerHTML = `<button style="background: #334155; color: #94a3b8; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px;" disabled>Done</button>`;
+                infoEl.innerText = `In Time: ${todayData.checkIn} | Out Time: ${todayData.checkOut}`;
+            }
+
+            renderLast7DaysAttendance();
+        }
+
+        function processSessionsUI(todayStr, customTargetHrs) {
+            let todayTotal = 0;
+            cachedSessions.forEach(data => {
+                if (data.dateStr === todayStr) {
+                    todayTotal += data.durationSec;
+                }
+            });
+
+            document.getElementById('dashToday').innerText = `${(todayTotal / 3600).toFixed(1)}h`;
+            const targetSec = customTargetHrs * 3600;
+            const pct = Math.min(100, Math.round((todayTotal / targetSec) * 100));
+            document.getElementById('targetBar').style.width = pct + '%';
+
+            renderLast15Days();
+            showBarChart();
+        }
+
+        function renderLast7DaysAttendance() {
+            const listEl = document.getElementById('last7DaysAttendanceList');
+            listEl.innerHTML = '';
+            for (let i = 0; i < 7; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                const data = cachedAttendance[dStr];
+                
+                if (data && data.checkIn) {
+                    const outText = data.checkOut ? data.checkOut : 'Active';
+                    listEl.innerHTML += `<div class="list-item"><span>📅 ${dStr}</span><span style="font-weight:bold; color:var(--accent-green);">In: ${data.checkIn} | Out: ${outText}</span></div>`;
+                } else {
+                    listEl.innerHTML += `<div class="list-item"><span>📅 ${dStr}</span><span style="font-weight:bold; color:var(--text-secondary);">Absent</span></div>`;
+                }
+            }
+        }
+
+        function renderLast15Days() {
+            const listEl = document.getElementById('last15DaysList');
+            listEl.innerHTML = '';
+            const dateMap = {};
+            for (let i = 0; i < 15; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                dateMap[d.toISOString().split('T')[0]] = 0;
+            }
+            cachedSessions.forEach(s => {
+                if (dateMap[s.dateStr] !== undefined) dateMap[s.dateStr] += s.durationSec;
+            });
+            for (const [date, sec] of Object.entries(dateMap)) {
+                const hrs = (sec / 3600).toFixed(1);
+                listEl.innerHTML += `<div class="list-item"><span>📅 ${date}</span><span style="font-weight:bold; color:var(--accent-blue);">${hrs} hrs</span></div>`;
+            }
+        }
+
+        function showBarChart() {
+            const dateMap = {};
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                dateMap[d.toISOString().split('T')[0]] = 0;
+            }
+            cachedSessions.forEach(s => {
+                if (dateMap[s.dateStr] !== undefined) dateMap[s.dateStr] += (s.durationSec / 3600);
+            });
+            const labels = Object.keys(dateMap).map(dt => dt.slice(5));
+            const dataVals = Object.values(dateMap);
+
+            if (myChartInstance) myChartInstance.destroy();
+            const ctx = document.getElementById('studyChart').getContext('2d');
+            myChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataVals,
+                        backgroundColor: '#38bdf8',
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function showPieChart() {
+            const subjectMap = {};
+            cachedSessions.forEach(s => {
+                subjectMap[s.subject] = (subjectMap[s.subject] || 0) + (s.durationSec / 3600);
+            });
+            const labels = Object.keys(subjectMap);
+            const dataVals = Object.values(subjectMap);
+            if (labels.length === 0) { labels.push('No Data'); dataVals.push(1); }
+
+            if (myChartInstance) myChartInstance.destroy();
+            const ctx = document.getElementById('studyChart').getContext('2d');
+            myChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataVals,
+                        backgroundColor: ['#38bdf8', '#10b981', '#fbbf24', '#c084fc', '#f43f5e']
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        function loadMonthlyAttendanceArchive() {
+            const selectedMonth = document.getElementById('attArchiveMonthPicker').value;
+            if (!selectedMonth) return;
+
+            let presentDaysCount = 0;
+            let html = ``;
+
+            for (const [dateStr, data] of Object.entries(cachedAttendance)) {
+                if (dateStr.startsWith(selectedMonth) && data.checkIn) {
+                    presentDaysCount++;
+                    const outText = data.checkOut ? data.checkOut : 'Active';
+                    html += `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #1e293b;"><span>📅 ${dateStr}</span><span style="font-weight:bold; color:var(--accent-green);">In: ${data.checkIn} | Out: ${outText}</span></div>`;
+                }
+            }
+
+            const resultContainer = document.getElementById('attMonthlyArchiveResult');
+            if (presentDaysCount === 0) {
+                resultContainer.innerHTML = `<span style="color: var(--accent-red);">No library records found for ${selectedMonth}</span>`;
+                return;
+            }
+
+            resultContainer.innerHTML = `<div style="margin-bottom:8px; font-weight:bold; color:var(--accent-yellow);">Total Present Days: ${presentDaysCount} Days</div>` + html;
+        }
+
+        function loadMonthlyStudyArchive() {
+            const selectedMonth = document.getElementById('studyArchiveMonthPicker').value;
+            if (!selectedMonth) return;
+
+            let subMap = {};
+            let totalMonthSec = 0;
+
+            cachedSessions.forEach(s => {
+                if (s.dateStr && s.dateStr.startsWith(selectedMonth)) {
+                    subMap[s.subject] = (subMap[s.subject] || 0) + s.durationSec;
+                    totalMonthSec += s.durationSec;
+                }
+            });
+
+            const resultContainer = document.getElementById('studyMonthlyArchiveResult');
+            if (totalMonthSec === 0) {
+                resultContainer.innerHTML = `<span style="color: var(--accent-red);">No study records found for ${selectedMonth}</span>`;
+                return;
+            }
+
+            let html = `<div style="margin-bottom:8px; font-weight:bold; color:var(--accent-green);">Total Study: ${(totalMonthSec/3600).toFixed(1)} Hours</div>`;
+            for (const [sub, sec] of Object.entries(subMap)) {
+                html += `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #1e293b;"><span>📖 ${sub}</span><span style="font-weight:bold; color:var(--accent-blue);">${(sec/3600).toFixed(1)} hrs</span></div>`;
+            }
+            resultContainer.innerHTML = html;
+        }
+
+        function saveSessionData(durationSec, subject) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const sessionObj = {
+                subject,
+                durationSec,
+                dateStr: todayStr,
+                timestamp: Date.now()
+            };
+
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).collection('sessions').add({
+                    ...sessionObj,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    loadAllUserData();
+                    updateLeaderboardData(durationSec);
+                });
+            } else {
+                let localSessions = JSON.parse(localStorage.getItem('guest_sessions') || '[]');
+                localSessions.push(sessionObj);
+                localStorage.setItem('guest_sessions', JSON.stringify(localSessions));
+                loadAllUserData();
+            }
+        }
+
+        function saveDailyTarget() {
+            const hrs = document.getElementById('targetHoursInput').value;
+            if (!hrs || hrs <= 0) return;
+            localStorage.setItem('userDailyTargetHrs', hrs);
+            loadAllUserData();
+        }
+
+        function saveExamTarget() {
+            const selectedDate = document.getElementById('examDatePicker').value;
+            if (!selectedDate) return;
+            localStorage.setItem('userExamDate', selectedDate);
+            calculateDaysLeft(selectedDate);
+        }
+
+        function calculateDaysLeft(targetDateStr) {
+            const targetDate = new Date(targetDateStr);
+            const today = new Date();
+            const diffTime = targetDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const displayElement = document.getElementById('daysRemaining');
+            
+            if (diffDays > 0) displayElement.innerText = `⏳ ${diffDays} Days Left`;
+            else if (diffDays === 0) displayElement.innerText = `🔥 Exam Today!`;
+            else displayElement.innerText = `⚠️ Date Passed`;
+        }
+
+        function updateLeaderboardData(addedSec) {
+            if (!currentUser) return;
+            const userRef = db.collection('leaderboard').doc(currentUser.uid);
+            userRef.set({
+                name: currentUser.displayName || 'Anonymous',
+                weeklySec: firebase.firestore.FieldValue.increment(addedSec)
+            }, { merge: true }).then(fetchLeaderboard);
+        }
+
+        function fetchLeaderboard() {
+            db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().then(snapshot => {
+                const list = document.getElementById('leaderboardList');
+                list.innerHTML = '';
+                let rank = 1;
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const hrs = (data.weeklySec / 3600).toFixed(1);
+                    list.innerHTML += `<div class="list-item"><span>${rank++}. ${data.name}</span><span style="font-weight:bold; color:var(--accent-yellow);">${hrs}h</span></div>`;
+                });
+            }).catch(() => {
+                document.getElementById('leaderboardList').innerHTML = `<div class="list-item"><span>Leaderboard unavailable</span><span>-</span></div>`;
+            });
+        }
+
+        function formatHHMMSS(sec) {
+            const h = Math.floor(sec / 3600).toString().padStart(2, '0');
+            const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
     </script>
 </body>
 </html>
