@@ -29,6 +29,11 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-primary); padding: 16px; max-width: 520px; margin: 0 auto; padding-bottom: 60px; }
 
+        /* Shuruat mein display none rakha hai taaki flicker na ho */
+        .auth-overlay { position: fixed; inset: 0; background: rgba(6, 9, 19, 0.98); z-index: 999; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
+        .auth-card { background: var(--bg-card); border: 1px solid var(--border-card); padding: 32px 24px; border-radius: 24px; width: 100%; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        .btn-google { background: #ea4335; color: white; border: none; padding: 16px; border-radius: 14px; width: 100%; font-weight: bold; margin-top: 20px; cursor: pointer; font-size: 15px; }
+
         .header { text-align: center; padding: 20px 0; }
         .header h1 { font-size: 26px; font-weight: 900; background: linear-gradient(to right, #38bdf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
@@ -61,23 +66,28 @@
         canvas { background: #060913; border-radius: 12px; margin-top: 12px; padding: 10px; }
         
         .picker-box { background: #060913; color: white; border: 1px solid var(--border-card); padding: 8px 12px; border-radius: 10px; font-size: 12px; outline: none; }
-        .btn-google-sm { background: #ea4335; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
     </style>
 </head>
 <body>
 
+    <!-- Auth Screen -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-card">
+            <h2>🚀 Sunny Smart Tracker</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Ultra Pro Cloud Study & Library Suite</p>
+            <button class="btn-google" onclick="loginWithGoogle()">Sign In with Google</button>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="header">
         <h1>Sunny Smart Tracker</h1>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Ultimate Edition (Guest / Cloud Mode)</p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Ultimate Edition</p>
     </div>
 
-    <!-- User / Auth Bar -->
-    <div class="user-bar" id="userBarContainer">
-        <span id="userInfoText" style="font-weight: 600; color: var(--accent-yellow);">Mode: Guest (Local Storage)</span>
-        <div id="authBtnWrapper">
-            <button class="btn-google-sm" onclick="loginWithGoogle()">Sign In with Google</button>
-        </div>
+    <div class="user-bar">
+        <span id="userEmail" style="font-weight: 600;">Loading...</span>
+        <button onclick="logout()" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer; font-weight:bold; font-size: 13px;">Logout</button>
     </div>
 
     <!-- Dashboard Grid -->
@@ -96,7 +106,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div>
                     <div class="card-label">🏛️ Library In / Out Status</div>
-                    <div id="attendanceStatus" style="font-size: 14px; font-weight: bold; color: var(--accent-yellow); margin-top: 4px;">Not Checked In</div>
+                    <div id="attendanceStatus" style="font-size: 14px; font-weight: bold; color: var(--accent-yellow); margin-top: 4px;">Checking status...</div>
                 </div>
                 <div id="attBtnContainer">
                     <button onclick="libraryCheckIn()" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>
@@ -215,6 +225,8 @@
         };
 
         firebase.initializeApp(firebaseConfig);
+        
+        // Persistence set ki gayi hai taaki login state browser yaad rakhe
         firebase.auth().setPersistence(firebase.auth.Auth.persistence.LOCAL);
 
         const auth = firebase.auth();
@@ -244,37 +256,31 @@
             localStorage.setItem('sunny_subject', state.subject);
         }
 
+        // Auth state change handler
         auth.onAuthStateChanged(user => {
-            const userInfoText = document.getElementById('userInfoText');
-            const authBtnWrapper = document.getElementById('authBtnWrapper');
-
             if (user) {
                 currentUser = user;
-                userInfoText.innerText = user.displayName || user.email;
-                userInfoText.style.color = "var(--accent-green)";
-                authBtnWrapper.innerHTML = `<button onclick="logout()" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer; font-weight:bold; font-size:12px;">Logout</button>`;
+                // Agar user logged in hai, toh login screen hidden hi rahegi (koi flicker nahi hoga)
+                document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('userEmail').innerText = user.displayName || user.email;
                 loadAllUserData();
+                fetchLeaderboard();
+                checkAndRestoreTimer();
             } else {
                 currentUser = null;
-                userInfoText.innerText = "Mode: Guest (Local Storage)";
-                userInfoText.style.color = "var(--accent-yellow)";
-                authBtnWrapper.innerHTML = `<button class="btn-google-sm" onclick="loginWithGoogle()">Sign In with Google</button>`;
-                loadAllUserData();
+                // Sirf tabhi login screen dikhegi jab user sach mein logout ho chuka ho
+                document.getElementById('authOverlay').style.display = 'flex';
             }
-            fetchLeaderboard();
-            checkAndRestoreTimer();
         });
 
         function loginWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(error => {
-                alert("Login failed: " + error.message);
-            });
+            auth.signInWithPopup(provider);
         }
 
         function logout() { 
             auth.signOut().then(() => {
-                location.reload();
+                localStorage.clear();
             }); 
         }
 
@@ -346,7 +352,7 @@
             }
 
             if (totalSec > 5) {
-                saveSessionData(totalSec, state.subject);
+                saveSessionToCloud(totalSec, state.subject);
             }
 
             localStorage.removeItem('sunny_isRunning');
@@ -379,128 +385,95 @@
         }
 
         function libraryCheckIn() {
+            if (!currentUser) return;
             const todayStr = new Date().toISOString().split('T')[0];
             const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            const attData = {
+            db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set({
                 checkIn: nowTime,
                 checkOut: null,
                 present: true,
-                timestamp: Date.now()
-            };
-
-            if (currentUser) {
-                db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set(attData, { merge: true }).then(() => {
-                    loadAllUserData();
-                });
-            } else {
-                let localAtt = JSON.parse(localStorage.getItem('guest_attendance') || '{}');
-                localAtt[todayStr] = attData;
-                localStorage.setItem('guest_attendance', JSON.stringify(localAtt));
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).then(() => {
                 loadAllUserData();
-            }
+            });
         }
 
         function libraryCheckOut() {
+            if (!currentUser) return;
             const todayStr = new Date().toISOString().split('T')[0];
             const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            if (currentUser) {
-                db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set({
-                    checkOut: nowTime
-                }, { merge: true }).then(() => {
-                    loadAllUserData();
-                });
-            } else {
-                let localAtt = JSON.parse(localStorage.getItem('guest_attendance') || '{}');
-                if (localAtt[todayStr]) {
-                    localAtt[todayStr].checkOut = nowTime;
-                    localStorage.setItem('guest_attendance', JSON.stringify(localAtt));
-                }
+            
+            db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set({
+                checkOut: nowTime
+            }, { merge: true }).then(() => {
                 loadAllUserData();
-            }
+            });
         }
 
         function loadAllUserData() {
+            if (!currentUser) return;
             const customTargetHrs = localStorage.getItem('userDailyTargetHrs') || 6;
             document.getElementById('targetHoursInput').value = customTargetHrs;
             document.getElementById('targetText').innerText = `Target: ${customTargetHrs} hrs`;
+
             const todayStr = new Date().toISOString().split('T')[0];
 
-            if (currentUser) {
-                db.collection('users').doc(currentUser.uid).collection('attendance').get().then(snapshot => {
-                    cachedAttendance = {};
-                    snapshot.forEach(doc => { cachedAttendance[doc.id] = doc.data(); });
-                    processAttendanceUI(todayStr);
-                }).catch(() => {
-                    cachedAttendance = {};
-                    processAttendanceUI(todayStr);
+            db.collection('users').doc(currentUser.uid).collection('attendance').get().then(snapshot => {
+                cachedAttendance = {};
+                snapshot.forEach(doc => { cachedAttendance[doc.id] = doc.data(); });
+
+                const todayData = cachedAttendance[todayStr];
+                const btnContainer = document.getElementById('attBtnContainer');
+                const statusEl = document.getElementById('attendanceStatus');
+                const infoEl = document.getElementById('libraryTimingInfo');
+
+                if (!todayData || !todayData.checkIn) {
+                    statusEl.innerText = "Not Checked In Today";
+                    statusEl.style.color = "var(--accent-yellow)";
+                    btnContainer.innerHTML = `<button onclick="libraryCheckIn()" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>`;
+                    infoEl.innerText = `In: -- | Out: --`;
+                } else if (todayData.checkIn && !todayData.checkOut) {
+                    statusEl.innerText = "🟢 Currently In Library";
+                    statusEl.style.color = "var(--accent-green)";
+                    btnContainer.innerHTML = `<button onclick="libraryCheckOut()" style="background: var(--accent-red); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check Out</button>`;
+                    infoEl.innerText = `In Time: ${todayData.checkIn} | Out: Ongoing...`;
+                } else {
+                    statusEl.innerText = "✅ Checked Out for Today";
+                    statusEl.style.color = "var(--accent-blue)";
+                    btnContainer.innerHTML = `<button style="background: #334155; color: #94a3b8; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px;" disabled>Done</button>`;
+                    infoEl.innerText = `In Time: ${todayData.checkIn} | Out Time: ${todayData.checkOut}`;
+                }
+
+                renderLast7DaysAttendance();
+            });
+
+            db.collection('users').doc(currentUser.uid).collection('sessions').orderBy('timestamp', 'desc').get().then(snapshot => {
+                cachedSessions = [];
+                let todayTotal = 0;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    cachedSessions.push(data);
+                    if (data.dateStr === todayStr) {
+                        todayTotal += data.durationSec;
+                    }
                 });
 
-                db.collection('users').doc(currentUser.uid).collection('sessions').orderBy('timestamp', 'desc').get().then(snapshot => {
-                    cachedSessions = [];
-                    snapshot.forEach(doc => { cachedSessions.push(doc.data()); });
-                    processSessionsUI(todayStr, customTargetHrs);
-                }).catch(() => {
-                    cachedSessions = [];
-                    processSessionsUI(todayStr, customTargetHrs);
-                });
-            } else {
-                cachedAttendance = JSON.parse(localStorage.getItem('guest_attendance') || '{}');
-                processAttendanceUI(todayStr);
+                document.getElementById('dashToday').innerText = `${(todayTotal / 3600).toFixed(1)}h`;
+                const targetSec = customTargetHrs * 3600;
+                const pct = Math.min(100, Math.round((todayTotal / targetSec) * 100));
+                document.getElementById('targetBar').style.width = pct + '%';
 
-                cachedSessions = JSON.parse(localStorage.getItem('guest_sessions') || '[]');
-                processSessionsUI(todayStr, customTargetHrs);
-            }
+                renderLast15Days();
+                showBarChart();
+            });
 
             const savedExamDate = localStorage.getItem('userExamDate');
             if (savedExamDate) {
                 document.getElementById('examDatePicker').value = savedExamDate;
                 calculateDaysLeft(savedExamDate);
             }
-        }
-
-        function processAttendanceUI(todayStr) {
-            const todayData = cachedAttendance[todayStr];
-            const btnContainer = document.getElementById('attBtnContainer');
-            const statusEl = document.getElementById('attendanceStatus');
-            const infoEl = document.getElementById('libraryTimingInfo');
-
-            if (!todayData || !todayData.checkIn) {
-                statusEl.innerText = "Not Checked In Today";
-                statusEl.style.color = "var(--accent-yellow)";
-                btnContainer.innerHTML = `<button onclick="libraryCheckIn()" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>`;
-                infoEl.innerText = `In: -- | Out: --`;
-            } else if (todayData.checkIn && !todayData.checkOut) {
-                statusEl.innerText = "🟢 Currently In Library";
-                statusEl.style.color = "var(--accent-green)";
-                btnContainer.innerHTML = `<button onclick="libraryCheckOut()" style="background: var(--accent-red); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check Out</button>`;
-                infoEl.innerText = `In Time: ${todayData.checkIn} | Out: Ongoing...`;
-            } else {
-                statusEl.innerText = "✅ Checked Out for Today";
-                statusEl.style.color = "var(--accent-blue)";
-                btnContainer.innerHTML = `<button style="background: #334155; color: #94a3b8; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px;" disabled>Done</button>`;
-                infoEl.innerText = `In Time: ${todayData.checkIn} | Out Time: ${todayData.checkOut}`;
-            }
-
-            renderLast7DaysAttendance();
-        }
-
-        function processSessionsUI(todayStr, customTargetHrs) {
-            let todayTotal = 0;
-            cachedSessions.forEach(data => {
-                if (data.dateStr === todayStr) {
-                    todayTotal += data.durationSec;
-                }
-            });
-
-            document.getElementById('dashToday').innerText = `${(todayTotal / 3600).toFixed(1)}h`;
-            const targetSec = customTargetHrs * 3600;
-            const pct = Math.min(100, Math.round((todayTotal / targetSec) * 100));
-            document.getElementById('targetBar').style.width = pct + '%';
-
-            renderLast15Days();
-            showBarChart();
         }
 
         function renderLast7DaysAttendance() {
@@ -643,29 +616,18 @@
             resultContainer.innerHTML = html;
         }
 
-        function saveSessionData(durationSec, subject) {
+        function saveSessionToCloud(durationSec, subject) {
+            if (!currentUser) return;
             const todayStr = new Date().toISOString().split('T')[0];
-            const sessionObj = {
+            db.collection('users').doc(currentUser.uid).collection('sessions').add({
                 subject,
                 durationSec,
                 dateStr: todayStr,
-                timestamp: Date.now()
-            };
-
-            if (currentUser) {
-                db.collection('users').doc(currentUser.uid).collection('sessions').add({
-                    ...sessionObj,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    loadAllUserData();
-                    updateLeaderboardData(durationSec);
-                });
-            } else {
-                let localSessions = JSON.parse(localStorage.getItem('guest_sessions') || '[]');
-                localSessions.push(sessionObj);
-                localStorage.setItem('guest_sessions', JSON.stringify(localSessions));
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
                 loadAllUserData();
-            }
+                updateLeaderboardData(durationSec);
+            });
         }
 
         function saveDailyTarget() {
@@ -713,8 +675,6 @@
                     const hrs = (data.weeklySec / 3600).toFixed(1);
                     list.innerHTML += `<div class="list-item"><span>${rank++}. ${data.name}</span><span style="font-weight:bold; color:var(--accent-yellow);">${hrs}h</span></div>`;
                 });
-            }).catch(() => {
-                document.getElementById('leaderboardList').innerHTML = `<div class="list-item"><span>Leaderboard unavailable</span><span>-</span></div>`;
             });
         }
 
