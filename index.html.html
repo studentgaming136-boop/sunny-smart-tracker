@@ -29,8 +29,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-primary); padding: 16px; max-width: 520px; margin: 0 auto; padding-bottom: 60px; }
 
-        /* Shuruat mein display none rakha hai taaki flicker na ho */
-        .auth-overlay { position: fixed; inset: 0; background: rgba(6, 9, 19, 0.98); z-index: 999; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
+        .auth-overlay { position: fixed; inset: 0; background: rgba(6, 9, 19, 0.98); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
         .auth-card { background: var(--bg-card); border: 1px solid var(--border-card); padding: 32px 24px; border-radius: 24px; width: 100%; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
         .btn-google { background: #ea4335; color: white; border: none; padding: 16px; border-radius: 14px; width: 100%; font-weight: bold; margin-top: 20px; cursor: pointer; font-size: 15px; }
 
@@ -216,19 +215,15 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
-            authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
-            projectId: "sunny-smart-tracker-73c04",
-            storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
-            messagingSenderId: "1049812610355",
-            appId: "1:1049812610355:web:e1859969900334680f6246"
+           apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
+  authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
+  projectId: "sunny-smart-tracker-73c04",
+  storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
+  messagingSenderId: "1049812610355",
+  appId: "1:1049812610355:web:e1859969900334680f6246"
         };
 
         firebase.initializeApp(firebaseConfig);
-        
-        // Persistence set ki gayi hai taaki login state browser yaad rakhe
-        firebase.auth().setPersistence(firebase.auth.Auth.persistence.LOCAL);
-
         const auth = firebase.auth();
         const db = firebase.firestore();
 
@@ -238,37 +233,34 @@
         let cachedSessions = [];
         let cachedAttendance = {};
 
+        // LocalStorage se timer state bachane ke liye taaki background mein band na ho
         function getTimerState() {
             return {
                 isRunning: localStorage.getItem('sunny_isRunning') === 'true',
                 startTime: parseInt(localStorage.getItem('sunny_startTime') || '0', 10),
                 accumulatedSec: parseInt(localStorage.getItem('sunny_accumulatedSec') || '0', 10),
                 isPaused: localStorage.getItem('sunny_isPaused') === 'true',
-                subject: localStorage.getItem('sunny_subject') === null ? 'Maths' : localStorage.getItem('sunny_subject')
+                subject: localStorage.getItem('sunny_subject') || 'Maths'
             };
         }
 
         function saveTimerState(state) {
             localStorage.setItem('sunny_isRunning', state.isRunning);
-            localStorage.setItem('sunny_startTime', state.startTime);
+                localStorage.setItem('sunny_startTime', state.startTime);
             localStorage.setItem('sunny_accumulatedSec', state.accumulatedSec);
             localStorage.setItem('sunny_isPaused', state.isPaused);
             localStorage.setItem('sunny_subject', state.subject);
         }
 
-        // Auth state change handler
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
-                // Agar user logged in hai, toh login screen hidden hi rahegi (koi flicker nahi hoga)
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('userEmail').innerText = user.displayName || user.email;
                 loadAllUserData();
                 fetchLeaderboard();
                 checkAndRestoreTimer();
             } else {
-                currentUser = null;
-                // Sirf tabhi login screen dikhegi jab user sach mein logout ho chuka ho
                 document.getElementById('authOverlay').style.display = 'flex';
             }
         });
@@ -278,12 +270,9 @@
             auth.signInWithPopup(provider);
         }
 
-        function logout() { 
-            auth.signOut().then(() => {
-                localStorage.clear();
-            }); 
-        }
+        function logout() { auth.signOut(); }
 
+        // Background-Proof Timer Recovery on Load/Visibility Change
         function checkAndRestoreTimer() {
             const state = getTimerState();
             if (state.isRunning && !state.isPaused) {
@@ -300,11 +289,12 @@
             }
         }
 
+        // Jab user doosre app se wapas is app par aaye, tab turant time recalculate karo
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden) {
                 const state = getTimerState();
                 if (state.isRunning && !state.isPaused) {
-                    runLoop();
+                    runLoop(); // turant sync kar lo
                 }
             }
         });
@@ -319,6 +309,7 @@
                 state.accumulatedSec = state.accumulatedSec || 0;
                 saveTimerState(state);
             } else if (state.isPaused) {
+                // Resume from pause
                 state.startTime = Date.now();
                 state.isPaused = false;
                 state.isRunning = true;
@@ -355,6 +346,7 @@
                 saveSessionToCloud(totalSec, state.subject);
             }
 
+            // Clear storage
             localStorage.removeItem('sunny_isRunning');
             localStorage.removeItem('sunny_startTime');
             localStorage.removeItem('sunny_accumulatedSec');
@@ -384,8 +376,8 @@
             document.getElementById('stopBtn').disabled = !running && !paused;
         }
 
+        // Library In / Out Logic
         function libraryCheckIn() {
-            if (!currentUser) return;
             const todayStr = new Date().toISOString().split('T')[0];
             const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
@@ -400,7 +392,6 @@
         }
 
         function libraryCheckOut() {
-            if (!currentUser) return;
             const todayStr = new Date().toISOString().split('T')[0];
             const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
@@ -412,7 +403,6 @@
         }
 
         function loadAllUserData() {
-            if (!currentUser) return;
             const customTargetHrs = localStorage.getItem('userDailyTargetHrs') || 6;
             document.getElementById('targetHoursInput').value = customTargetHrs;
             document.getElementById('targetText').innerText = `Target: ${customTargetHrs} hrs`;
@@ -617,7 +607,6 @@
         }
 
         function saveSessionToCloud(durationSec, subject) {
-            if (!currentUser) return;
             const todayStr = new Date().toISOString().split('T')[0];
             db.collection('users').doc(currentUser.uid).collection('sessions').add({
                 subject,
@@ -657,7 +646,6 @@
         }
 
         function updateLeaderboardData(addedSec) {
-            if (!currentUser) return;
             const userRef = db.collection('leaderboard').doc(currentUser.uid);
             userRef.set({
                 name: currentUser.displayName || 'Anonymous',
