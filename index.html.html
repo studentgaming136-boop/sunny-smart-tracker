@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sunny Smart Tracker - Global</title>
+    <title>Sunny Smart Tracker - Pro</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Chart.js for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -25,7 +27,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-primary); padding: 12px; max-width: 480px; margin: 0 auto; padding-bottom: 30px; }
+        body { background-color: var(--bg-body); color: var(--text-primary); padding: 12px; max-width: 480px; margin: 0 auto; padding-bottom: 40px; }
 
         .auth-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
         .auth-card { background: var(--bg-card); border: 1px solid var(--border-card); padding: 24px; border-radius: 16px; width: 100%; text-align: center; }
@@ -53,8 +55,11 @@
         .btn-pause { background-color: var(--accent-yellow); }
         .btn-stop { background-color: var(--accent-red); }
 
-        .leaderboard-box { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
-        .rank-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 12px; }
+        .section-box { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
+        .list-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 12px; }
+        
+        .btn-chart { background: var(--accent-blue); color: #0f172a; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; margin-right: 5px; }
+        canvas { background: #0f172a; border-radius: 8px; margin-top: 10px; padding: 5px; }
     </style>
 </head>
 <body>
@@ -63,15 +68,15 @@
     <div class="auth-overlay" id="authOverlay">
         <div class="auth-card">
             <h2>🚀 Sunny Smart Tracker</h2>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">Sign in to sync your study data globally</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">Advanced Study & Library System</p>
             <button class="btn-google" onclick="loginWithGoogle()">Sign In with Google</button>
         </div>
     </div>
 
-    <!-- Header & User Profile -->
+    <!-- Header -->
     <div class="header">
         <h1>🚀 Sunny Smart Tracker</h1>
-        <p>Global Study & Streak System</p>
+        <p>Pro Edition</p>
     </div>
 
     <div class="user-bar">
@@ -79,7 +84,7 @@
         <button onclick="logout()" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer;">Logout</button>
     </div>
 
-    <!-- Dashboard -->
+    <!-- Dashboard Grid -->
     <div class="grid-dashboard">
         <div class="card">
             <div class="card-label">Aaj Ka Time</div>
@@ -90,25 +95,35 @@
             <div class="card-val" id="dashStreak">🔥 0 Days</div>
         </div>
 
-        <!-- Exam Target Countdown Box -->
-        <div class="card card-full">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span class="card-label">🎯 Exam Target Countdown</span>
-                <input type="date" id="examDatePicker" onchange="saveExamTarget()" style="background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 4px; border-radius: 6px;">
-            </div>
+        <!-- Library Attendance Card -->
+        <div class="card card-full" style="background: #172033; border-left: 4px solid var(--accent-green);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span id="examNameText" style="font-size: 13px; color: var(--text-secondary);">Set Target Date ➔</span>
-                <span id="daysRemaining" style="font-size: 16px; font-weight: 800; color: var(--accent-yellow);">-- Days Left</span>
+                <div>
+                    <div class="card-label">🏛️ Library Attendance</div>
+                    <div id="attendanceStatus" style="font-size: 13px; font-weight: bold; color: var(--accent-yellow); margin-top: 2px;">Not Marked Today</div>
+                </div>
+                <button onclick="markAttendance()" id="attBtn" style="background: var(--accent-green); color: #0f172a; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Mark Present</button>
             </div>
         </div>
 
-        <!-- Daily Target Progress Box with Custom Input -->
+        <!-- Exam Target Countdown -->
+        <div class="card card-full">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="card-label">🎯 Exam Countdown</span>
+                <input type="date" id="examDatePicker" onchange="saveExamTarget()" style="background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 4px; border-radius: 6px; font-size: 11px;">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="examNameText" style="font-size: 12px; color: var(--text-secondary);">Set Target Date ➔</span>
+                <span id="daysRemaining" style="font-size: 15px; font-weight: 800; color: var(--accent-yellow);">-- Days Left</span>
+            </div>
+        </div>
+
+        <!-- Daily Target Hours -->
         <div class="card card-full">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span class="card-label">Daily Target Progress</span>
+                <span class="card-label">Daily Target Hours</span>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <input type="number" id="targetHoursInput" min="1" max="24" value="6" style="width: 45px; background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 2px 4px; border-radius: 4px; font-size: 12px;">
-                    <span style="font-size: 11px; color: var(--text-secondary);">hrs</span>
+                    <input type="number" id="targetHoursInput" min="1" max="24" value="6" style="width: 42px; background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 2px 4px; border-radius: 4px; font-size: 11px;">
                     <button onclick="saveDailyTarget()" style="background: var(--accent-blue); color: #0f172a; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer;">Set</button>
                 </div>
             </div>
@@ -136,18 +151,54 @@
         </div>
     </div>
 
+    <!-- Charts & Analytics Section -->
+    <div class="section-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="card-label">📊 Study Analytics</span>
+            <div>
+                <button class="btn-chart" onclick="showBarChart()">15 Days Bar</button>
+                <button class="btn-chart" onclick="showPieChart()" style="background: var(--accent-purple); color: white;">Subject Pie</button>
+            </div>
+        </div>
+        <canvas id="studyChart" height="180"></canvas>
+    </div>
+
+    <!-- Last 15 Days Study History -->
+    <div class="section-box">
+        <div class="card-label" style="margin-bottom: 8px;">📅 Last 15 Days Study Record</div>
+        <div id="last15DaysList" style="max-height: 160px; overflow-y: auto;">
+            <div class="list-item"><span>Loading records...</span><span>-</span></div>
+        </div>
+    </div>
+
+    <!-- Last 7 Days Attendance History -->
+    <div class="section-box">
+        <div class="card-label" style="margin-bottom: 8px;">🏛️ Last 7 Days Library Attendance</div>
+        <div id="last7DaysAttendanceList" style="max-height: 140px; overflow-y: auto;">
+            <div class="list-item"><span>Loading attendance...</span><span>-</span></div>
+        </div>
+    </div>
+
+    <!-- Month-wise View Section -->
+    <div class="section-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="card-label">📂 Month-wise Archive</span>
+            <input type="month" id="archiveMonthPicker" onchange="loadMonthlyArchive()" style="background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 3px; border-radius: 6px; font-size: 11px;">
+        </div>
+        <div id="monthlyArchiveResult" style="font-size: 12px; color: var(--text-secondary);">Select a month above to view total hours.</div>
+    </div>
+
     <!-- Global Leaderboard -->
-    <div class="leaderboard-box">
+    <div class="section-box">
         <div class="card-label" style="margin-bottom: 8px;">🏆 Weekly Top Students</div>
         <div id="leaderboardList">
-            <div class="rank-item"><span>1. Loading...</span><span>0h</span></div>
+            <div class="list-item"><span>1. Loading...</span><span>0h</span></div>
         </div>
     </div>
 
     <script>
-        // Firebase Setup Configuration (Apni original keys yahan daal dein)
         const firebaseConfig = {
-            apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
+           apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
   authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
   projectId: "sunny-smart-tracker-73c04",
   storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
@@ -162,14 +213,15 @@
         let currentUser = null;
         let timerState = { startTime: null, accumulatedSec: 0, isPaused: false, subject: 'Maths' };
         let timerInterval = null;
+        let myChartInstance = null;
+        let cachedSessions = [];
 
-        // Authentication Listener
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('userEmail').innerText = user.displayName || user.email;
-                loadUserData();
+                loadAllUserData();
                 fetchLeaderboard();
             } else {
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -183,13 +235,11 @@
 
         function logout() { auth.signOut(); }
 
-        // Background-Safe Timer Logic
+        // Timer Logic
         function startTimer() {
             timerState.subject = document.getElementById('subjectSelect').value;
             timerState.startTime = Date.now();
             timerState.isPaused = false;
-            
-            localStorage.setItem('activeTimer', JSON.stringify(timerState));
             runLoop();
             toggleControls(true);
         }
@@ -199,8 +249,6 @@
             timerState.accumulatedSec += elapsed;
             timerState.isPaused = true;
             timerState.startTime = null;
-
-            localStorage.setItem('activeTimer', JSON.stringify(timerState));
             clearInterval(timerInterval);
             toggleControls(false, true);
         }
@@ -217,7 +265,6 @@
 
             clearInterval(timerInterval);
             timerState = { startTime: null, accumulatedSec: 0, isPaused: false, subject: 'Maths' };
-            localStorage.removeItem('activeTimer');
             document.getElementById('timerDisplay').innerText = "00:00:00";
             toggleControls(false);
         }
@@ -239,44 +286,190 @@
             document.getElementById('stopBtn').disabled = !running && !paused;
         }
 
-        // Daily Target Save Logic
-        function saveDailyTarget() {
-            const hrs = document.getElementById('targetHoursInput').value;
-            if (!hrs || hrs <= 0) return;
-            localStorage.setItem('userDailyTargetHrs', hrs);
-            loadUserData();
+        // Library Attendance Logic
+        function markAttendance() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set({
+                present: true,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                loadAllUserData();
+            });
         }
 
-        // Exam Target Countdown Logic
-        function saveExamTarget() {
-            const selectedDate = document.getElementById('examDatePicker').value;
-            if (!selectedDate) return;
+        function loadAllUserData() {
+            const customTargetHrs = localStorage.getItem('userDailyTargetHrs') || 6;
+            document.getElementById('targetHoursInput').value = customTargetHrs;
+            document.getElementById('targetText').innerText = `Target: ${customTargetHrs} hrs`;
 
-            localStorage.setItem('userExamDate', selectedDate);
-            calculateDaysLeft(selectedDate);
-        }
+            const todayStr = new Date().toISOString().split('T')[0];
 
-        function calculateDaysLeft(targetDateStr) {
-            const targetDate = new Date(targetDateStr);
-            const today = new Date();
-            
-            const diffTime = targetDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            // Load Attendance data for last 7 days
+            db.collection('users').doc(currentUser.uid).collection('attendance').get().then(snapshot => {
+                const attMap = {};
+                snapshot.forEach(doc => {
+                    attMap[doc.id] = doc.data().present;
+                });
 
-            const displayElement = document.getElementById('daysRemaining');
-            if (diffDays > 0) {
-                displayElement.innerText = `⏳ ${diffDays} Days Left`;
-                displayElement.style.color = 'var(--accent-yellow)';
-            } else if (diffDays === 0) {
-                displayElement.innerText = `🔥 Exam Today! All The Best!`;
-                displayElement.style.color = 'var(--accent-green)';
-            } else {
-                displayElement.innerText = `⚠️ Date Passed`;
-                displayElement.style.color = 'var(--accent-red)';
+                // Check today status
+                if (attMap[todayStr]) {
+                    document.getElementById('attendanceStatus').innerText = "✅ Marked Present Today";
+                    document.getElementById('attendanceStatus').style.color = "var(--accent-green)";
+                    document.getElementById('attBtn').innerText = "Done";
+                    document.getElementById('attBtn').disabled = true;
+                }
+
+                renderLast7DaysAttendance(attMap);
+            });
+
+            // Load Study Sessions
+            db.collection('users').doc(currentUser.uid).collection('sessions').orderBy('timestamp', 'desc').get().then(snapshot => {
+                cachedSessions = [];
+                let todayTotal = 0;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    cachedSessions.push(data);
+                    if (data.dateStr === todayStr) {
+                        todayTotal += data.durationSec;
+                    }
+                });
+
+                document.getElementById('dashToday').innerText = `${(todayTotal / 3600).toFixed(1)}h`;
+                const targetSec = customTargetHrs * 3600;
+                const pct = Math.min(100, Math.round((todayTotal / targetSec) * 100));
+                document.getElementById('targetBar').style.width = pct + '%';
+
+                renderLast15Days();
+                showBarChart();
+            });
+
+            const savedExamDate = localStorage.getItem('userExamDate');
+            if (savedExamDate) {
+                document.getElementById('examDatePicker').value = savedExamDate;
+                calculateDaysLeft(savedExamDate);
             }
         }
 
-        // Firestore Operations & Local Data
+        function renderLast7DaysAttendance(attMap) {
+            const listEl = document.getElementById('last7DaysAttendanceList');
+            listEl.innerHTML = '';
+            
+            for (let i = 0; i < 7; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                const isPresent = attMap[dStr];
+                
+                const statusText = isPresent ? "✅ Present" : "❌ Absent";
+                const color = isPresent ? "var(--accent-green)" : "var(--text-secondary)";
+                listEl.innerHTML += `<div class="list-item"><span>📅 ${dStr}</span><span style="font-weight:bold; color:${color};">${statusText}</span></div>`;
+            }
+        }
+
+        function renderLast15Days() {
+            const listEl = document.getElementById('last15DaysList');
+            listEl.innerHTML = '';
+            
+            const dateMap = {};
+            for (let i = 0; i < 15; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                dateMap[dStr] = 0;
+            }
+
+            cachedSessions.forEach(s => {
+                if (dateMap[s.dateStr] !== undefined) {
+                    dateMap[s.dateStr] += s.durationSec;
+                }
+            });
+
+            for (const [date, sec] of Object.entries(dateMap)) {
+                const hrs = (sec / 3600).toFixed(1);
+                listEl.innerHTML += `<div class="list-item"><span>📅 ${date}</span><span style="font-weight:bold; color:var(--accent-blue);">${hrs} hrs</span></div>`;
+            }
+        }
+
+        function showBarChart() {
+            const dateMap = {};
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                dateMap[dStr] = 0;
+            }
+
+            cachedSessions.forEach(s => {
+                if (dateMap[s.dateStr] !== undefined) {
+                    dateMap[s.dateStr] += (s.durationSec / 3600);
+                }
+            });
+
+            const labels = Object.keys(dateMap).map(dt => dt.slice(5));
+            const dataVals = Object.values(dateMap);
+
+            if (myChartInstance) myChartInstance.destroy();
+            const ctx = document.getElementById('studyChart').getContext('2d');
+            myChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Hours',
+                        data: dataVals,
+                        backgroundColor: '#38bdf8',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function showPieChart() {
+            const subjectMap = {};
+            cachedSessions.forEach(s => {
+                subjectMap[s.subject] = (subjectMap[s.subject] || 0) + (s.durationSec / 3600);
+            });
+
+            const labels = Object.keys(subjectMap);
+            const dataVals = Object.values(subjectMap);
+
+            if (labels.length === 0) {
+                labels.push('No Data');
+                dataVals.push(1);
+            }
+
+            if (myChartInstance) myChartInstance.destroy();
+            const ctx = document.getElementById('studyChart').getContext('2d');
+            myChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataVals,
+                        backgroundColor: ['#38bdf8', '#10b981', '#f59e0b', '#818cf8', '#ef4444']
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        function loadMonthlyArchive() {
+            const selectedMonth = document.getElementById('archiveMonthPicker').value;
+            if (!selectedMonth) return;
+
+            let totalSec = 0;
+            cachedSessions.forEach(s => {
+                if (s.dateStr && s.dateStr.startsWith(selectedMonth)) {
+                    totalSec += s.durationSec;
+                }
+            });
+
+            const totalHrs = (totalSec / 3600).toFixed(1);
+            document.getElementById('monthlyArchiveResult').innerHTML = `💡 Total Study in <b>${selectedMonth}</b>: <span style="color:var(--accent-green); font-size:14px; font-weight:bold;">${totalHrs} Hours</span>`;
+        }
+
         function saveSessionToCloud(durationSec, subject) {
             const todayStr = new Date().toISOString().split('T')[0];
             db.collection('users').doc(currentUser.uid).collection('sessions').add({
@@ -285,36 +478,35 @@
                 dateStr: todayStr,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
-                loadUserData();
+                loadAllUserData();
                 updateLeaderboardData(durationSec);
             });
         }
 
-        function loadUserData() {
-            const customTargetHrs = localStorage.getItem('userDailyTargetHrs') || 6;
-            document.getElementById('targetHoursInput').value = customTargetHrs;
-            document.getElementById('targetText').innerText = `Target: ${customTargetHrs} hrs`;
+        function saveDailyTarget() {
+            const hrs = document.getElementById('targetHoursInput').value;
+            if (!hrs || hrs <= 0) return;
+            localStorage.setItem('userDailyTargetHrs', hrs);
+            loadAllUserData();
+        }
 
-            const todayStr = new Date().toISOString().split('T')[0];
-            db.collection('users').doc(currentUser.uid).collection('sessions')
-              .where('dateStr', '==', todayStr)
-              .get().then(snapshot => {
-                  let totalToday = 0;
-                  snapshot.forEach(doc => totalToday += doc.data().durationSec);
-                  
-                  const hours = (totalToday / 3600).toFixed(1);
-                  document.getElementById('dashToday').innerText = `${hours}h`;
-                  
-                  const targetSec = customTargetHrs * 3600;
-                  const pct = Math.min(100, Math.round((totalToday / targetSec) * 100));
-                  document.getElementById('targetBar').style.width = pct + '%';
-              });
+        function saveExamTarget() {
+            const selectedDate = document.getElementById('examDatePicker').value;
+            if (!selectedDate) return;
+            localStorage.setItem('userExamDate', selectedDate);
+            calculateDaysLeft(selectedDate);
+        }
 
-            const savedExamDate = localStorage.getItem('userExamDate');
-            if (savedExamDate) {
-                document.getElementById('examDatePicker').value = savedExamDate;
-                calculateDaysLeft(savedExamDate);
-            }
+        function calculateDaysLeft(targetDateStr) {
+            const targetDate = new Date(targetDateStr);
+            const today = new Date();
+            const diffTime = targetDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const displayElement = document.getElementById('daysRemaining');
+            
+            if (diffDays > 0) displayElement.innerText = `⏳ ${diffDays} Days Left`;
+            else if (diffDays === 0) displayElement.innerText = `🔥 Exam Today!`;
+            else displayElement.innerText = `⚠️ Date Passed`;
         }
 
         function updateLeaderboardData(addedSec) {
@@ -326,14 +518,14 @@
         }
 
         function fetchLeaderboard() {
-            db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().top?.forEach || db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().then(snapshot => {
+            db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().then(snapshot => {
                 const list = document.getElementById('leaderboardList');
                 list.innerHTML = '';
                 let rank = 1;
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const hrs = (data.weeklySec / 3600).toFixed(1);
-                    list.innerHTML += `<div class="rank-item"><span>${rank++}. ${data.name}</span><span>${hrs}h</span></div>`;
+                    list.innerHTML += `<div class="list-item"><span>${rank++}. ${data.name}</span><span style="font-weight:bold;">${hrs}h</span></div>`;
                 });
             });
         }
