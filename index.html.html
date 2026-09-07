@@ -3,63 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sunny Smart Tracker - Pro</title>
+    <title>Sunny Smart Tracker - Pro UI</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <!-- Chart.js for Graphs -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
-            --bg-body: #0f172a;
-            --bg-card: #1e293b;
-            --border-card: #334155;
-            --text-primary: #f8fafc;
+            --bg-body: #090d16;
+            --bg-card: #131d31;
+            --border-card: #22324f;
+            --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-yellow: #f59e0b;
-            --accent-blue: #38bdf8;
-            --accent-purple: #818cf8;
+            --accent-red: #f43f5e;
+            --accent-yellow: #fbbf24;
+            --accent-blue: #0ea5e9;
+            --accent-purple: #a855f7;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-primary); padding: 12px; max-width: 480px; margin: 0 auto; padding-bottom: 40px; }
+        body { background-color: var(--bg-body); color: var(--text-primary); padding: 12px; max-width: 480px; margin: 0 auto; padding-bottom: 50px; }
 
-        .auth-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .auth-card { background: var(--bg-card); border: 1px solid var(--border-card); padding: 24px; border-radius: 16px; width: 100%; text-align: center; }
-        .btn-google { background: #ea4335; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; }
+        .auth-overlay { position: fixed; inset: 0; background: rgba(9, 13, 22, 0.98); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .auth-card { background: var(--bg-card); border: 1px solid var(--border-card); padding: 24px; border-radius: 20px; width: 100%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .btn-google { background: #ea4335; color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; font-size: 14px; }
 
-        .header { text-align: center; padding: 10px 0 15px 0; }
-        .user-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
+        .header { text-align: center; padding: 15px 0; }
+        .header h1 { font-size: 22px; background: linear-gradient(to right, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .user-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 14px; border-radius: 12px; font-size: 12px; margin-bottom: 14px; }
 
-        .grid-dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .card { background-color: var(--bg-card); border: 1px solid var(--border-card); border-radius: 12px; padding: 12px; }
+        .grid-dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border-card); border-radius: 14px; padding: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .card-full { grid-column: span 2; }
-        .card-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
-        .card-val { font-size: 20px; font-weight: 700; color: #ffffff; }
+        .card-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .card-val { font-size: 22px; font-weight: 800; color: #ffffff; }
 
-        .progress-track { width: 100%; background-color: #334155; height: 8px; border-radius: 4px; margin-top: 6px; overflow: hidden; }
-        .progress-fill { height: 100%; background-color: var(--accent-purple); width: 0%; transition: width 0.3s; }
+        .progress-track { width: 100%; background-color: #1e293b; height: 8px; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(to right, var(--accent-blue), var(--accent-purple)); width: 0%; transition: width 0.4s ease; }
 
-        .timer-box { background-color: var(--bg-card); border: 2px solid var(--accent-purple); border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 15px; }
-        select.subject-dropdown { width: 100%; padding: 10px; background-color: #0f172a; color: #ffffff; border: 1px solid var(--border-card); border-radius: 8px; margin-bottom: 12px; }
-        .timer-screen { font-size: 38px; font-weight: 800; font-family: monospace; margin: 10px 0 15px 0; }
+        .timer-box { background-color: var(--bg-card); border: 2px solid var(--accent-purple); border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(168, 85, 247, 0.15); }
+        select.subject-dropdown { width: 100%; padding: 12px; background-color: #090d16; color: #ffffff; border: 1px solid var(--border-card); border-radius: 10px; margin-bottom: 14px; font-size: 14px; outline: none; }
+        .timer-screen { font-size: 42px; font-weight: 900; font-family: monospace; margin: 10px 0 16px 0; color: #f8fafc; letter-spacing: 2px; }
 
-        .btn-row { display: flex; gap: 8px; }
-        .btn-action { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; color: white; cursor: pointer; }
+        .btn-row { display: flex; gap: 10px; }
+        .btn-action { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; font-size: 13px; }
         .btn-start { background-color: var(--accent-green); }
-        .btn-pause { background-color: var(--accent-yellow); }
+        .btn-pause { background-color: var(--accent-yellow); color: #090d16; }
         .btn-stop { background-color: var(--accent-red); }
 
-        .section-box { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
-        .list-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 12px; }
+        .section-box { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+        .list-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 12px; }
+        .list-item:last-child { border-bottom: none; }
         
-        .btn-chart { background: var(--accent-blue); color: #0f172a; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; margin-right: 5px; }
-        canvas { background: #0f172a; border-radius: 8px; margin-top: 10px; padding: 5px; }
+        .btn-chart { background: var(--accent-blue); color: #090d16; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer; margin-left: 4px; }
+        canvas { background: #090d16; border-radius: 10px; margin-top: 10px; padding: 8px; }
     </style>
 </head>
 <body>
@@ -68,20 +71,20 @@
     <div class="auth-overlay" id="authOverlay">
         <div class="auth-card">
             <h2>🚀 Sunny Smart Tracker</h2>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">Advanced Study & Library System</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">Pro Cloud Study & Attendance Suite</p>
             <button class="btn-google" onclick="loginWithGoogle()">Sign In with Google</button>
         </div>
     </div>
 
     <!-- Header -->
     <div class="header">
-        <h1>🚀 Sunny Smart Tracker</h1>
-        <p>Pro Edition</p>
+        <h1>Sunny Smart Tracker</h1>
+        <p style="font-size: 11px; color: var(--text-secondary);">Advanced Version</p>
     </div>
 
     <div class="user-bar">
-        <span id="userEmail">Loading...</span>
-        <button onclick="logout()" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer;">Logout</button>
+        <span id="userEmail" style="font-weight: 600;">Loading...</span>
+        <button onclick="logout()" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer; font-weight:bold;">Logout</button>
     </div>
 
     <!-- Dashboard Grid -->
@@ -96,13 +99,13 @@
         </div>
 
         <!-- Library Attendance Card -->
-        <div class="card card-full" style="background: #172033; border-left: 4px solid var(--accent-green);">
+        <div class="card card-full" style="background: linear-gradient(135deg, #131d31, #17253d); border-left: 4px solid var(--accent-green);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div class="card-label">🏛️ Library Attendance</div>
-                    <div id="attendanceStatus" style="font-size: 13px; font-weight: bold; color: var(--accent-yellow); margin-top: 2px;">Not Marked Today</div>
+                    <div id="attendanceStatus" style="font-size: 13px; font-weight: bold; color: var(--accent-yellow); margin-top: 2px;">Checking status...</div>
                 </div>
-                <button onclick="markAttendance()" id="attBtn" style="background: var(--accent-green); color: #0f172a; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Mark Present</button>
+                <button onclick="markAttendance()" id="attBtn" style="background: var(--accent-green); color: #090d16; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">Mark Present</button>
             </div>
         </div>
 
@@ -110,10 +113,10 @@
         <div class="card card-full">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span class="card-label">🎯 Exam Countdown</span>
-                <input type="date" id="examDatePicker" onchange="saveExamTarget()" style="background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 4px; border-radius: 6px; font-size: 11px;">
+                <input type="date" id="examDatePicker" onchange="saveExamTarget()" style="background: #090d16; color: white; border: 1px solid var(--border-card); padding: 5px; border-radius: 8px; font-size: 11px; outline: none;">
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span id="examNameText" style="font-size: 12px; color: var(--text-secondary);">Set Target Date ➔</span>
+                <span id="examNameText" style="font-size: 12px; color: var(--text-secondary);">Target Date ➔</span>
                 <span id="daysRemaining" style="font-size: 15px; font-weight: 800; color: var(--accent-yellow);">-- Days Left</span>
             </div>
         </div>
@@ -123,8 +126,8 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span class="card-label">Daily Target Hours</span>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <input type="number" id="targetHoursInput" min="1" max="24" value="6" style="width: 42px; background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 2px 4px; border-radius: 4px; font-size: 11px;">
-                    <button onclick="saveDailyTarget()" style="background: var(--accent-blue); color: #0f172a; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer;">Set</button>
+                    <input type="number" id="targetHoursInput" min="1" max="24" value="6" style="width: 45px; background: #090d16; color: white; border: 1px solid var(--border-card); padding: 4px; border-radius: 6px; font-size: 12px; text-align: center; outline: none;">
+                    <button onclick="saveDailyTarget()" style="background: var(--accent-blue); color: #090d16; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Set</button>
                 </div>
             </div>
             <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
@@ -151,16 +154,16 @@
         </div>
     </div>
 
-    <!-- Charts & Analytics Section -->
+    <!-- Charts & Analytics -->
     <div class="section-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span class="card-label">📊 Study Analytics</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span class="card-label">📊 Analytics</span>
             <div>
-                <button class="btn-chart" onclick="showBarChart()">15 Days Bar</button>
-                <button class="btn-chart" onclick="showPieChart()" style="background: var(--accent-purple); color: white;">Subject Pie</button>
+                <button class="btn-chart" onclick="showBarChart()">15 Days</button>
+                <button class="btn-chart" onclick="showPieChart()" style="background: var(--accent-purple); color: white;">Subjects</button>
             </div>
         </div>
-        <canvas id="studyChart" height="180"></canvas>
+        <canvas id="studyChart" height="170"></canvas>
     </div>
 
     <!-- Last 15 Days Study History -->
@@ -179,13 +182,13 @@
         </div>
     </div>
 
-    <!-- Month-wise View Section -->
+    <!-- Subject-wise Month Archive Section -->
     <div class="section-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span class="card-label">📂 Month-wise Archive</span>
-            <input type="month" id="archiveMonthPicker" onchange="loadMonthlyArchive()" style="background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 3px; border-radius: 6px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span class="card-label">📂 Subject-wise Month Archive</span>
+            <input type="month" id="archiveMonthPicker" onchange="loadMonthlyArchive()" style="background: #090d16; color: white; border: 1px solid var(--border-card); padding: 4px; border-radius: 8px; font-size: 11px; outline: none;">
         </div>
-        <div id="monthlyArchiveResult" style="font-size: 12px; color: var(--text-secondary);">Select a month above to view total hours.</div>
+        <div id="monthlyArchiveResult" style="font-size: 12px; color: var(--text-secondary);">Select a month above to view subject breakdown.</div>
     </div>
 
     <!-- Global Leaderboard -->
@@ -198,7 +201,7 @@
 
     <script>
         const firebaseConfig = {
-           apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
+            apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
   authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
   projectId: "sunny-smart-tracker-73c04",
   storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
@@ -235,7 +238,6 @@
 
         function logout() { auth.signOut(); }
 
-        // Timer Logic
         function startTimer() {
             timerState.subject = document.getElementById('subjectSelect').value;
             timerState.startTime = Date.now();
@@ -286,7 +288,6 @@
             document.getElementById('stopBtn').disabled = !running && !paused;
         }
 
-        // Library Attendance Logic
         function markAttendance() {
             const todayStr = new Date().toISOString().split('T')[0];
             db.collection('users').doc(currentUser.uid).collection('attendance').doc(todayStr).set({
@@ -304,25 +305,24 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
 
-            // Load Attendance data for last 7 days
             db.collection('users').doc(currentUser.uid).collection('attendance').get().then(snapshot => {
                 const attMap = {};
-                snapshot.forEach(doc => {
-                    attMap[doc.id] = doc.data().present;
-                });
+                snapshot.forEach(doc => { attMap[doc.id] = doc.data().present; });
 
-                // Check today status
                 if (attMap[todayStr]) {
                     document.getElementById('attendanceStatus').innerText = "✅ Marked Present Today";
                     document.getElementById('attendanceStatus').style.color = "var(--accent-green)";
                     document.getElementById('attBtn').innerText = "Done";
                     document.getElementById('attBtn').disabled = true;
+                } else {
+                    document.getElementById('attendanceStatus').innerText = "Not Marked Today";
+                    document.getElementById('attendanceStatus').style.color = "var(--accent-yellow)";
+                    document.getElementById('attBtn').innerText = "Mark Present";
+                    document.getElementById('attBtn').disabled = false;
                 }
-
                 renderLast7DaysAttendance(attMap);
             });
 
-            // Load Study Sessions
             db.collection('users').doc(currentUser.uid).collection('sessions').orderBy('timestamp', 'desc').get().then(snapshot => {
                 cachedSessions = [];
                 let todayTotal = 0;
@@ -354,13 +354,11 @@
         function renderLast7DaysAttendance(attMap) {
             const listEl = document.getElementById('last7DaysAttendanceList');
             listEl.innerHTML = '';
-            
             for (let i = 0; i < 7; i++) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 const dStr = d.toISOString().split('T')[0];
                 const isPresent = attMap[dStr];
-                
                 const statusText = isPresent ? "✅ Present" : "❌ Absent";
                 const color = isPresent ? "var(--accent-green)" : "var(--text-secondary)";
                 listEl.innerHTML += `<div class="list-item"><span>📅 ${dStr}</span><span style="font-weight:bold; color:${color};">${statusText}</span></div>`;
@@ -370,21 +368,15 @@
         function renderLast15Days() {
             const listEl = document.getElementById('last15DaysList');
             listEl.innerHTML = '';
-            
             const dateMap = {};
             for (let i = 0; i < 15; i++) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                const dStr = d.toISOString().split('T')[0];
-                dateMap[dStr] = 0;
+                dateMap[d.toISOString().split('T')[0]] = 0;
             }
-
             cachedSessions.forEach(s => {
-                if (dateMap[s.dateStr] !== undefined) {
-                    dateMap[s.dateStr] += s.durationSec;
-                }
+                if (dateMap[s.dateStr] !== undefined) dateMap[s.dateStr] += s.durationSec;
             });
-
             for (const [date, sec] of Object.entries(dateMap)) {
                 const hrs = (sec / 3600).toFixed(1);
                 listEl.innerHTML += `<div class="list-item"><span>📅 ${date}</span><span style="font-weight:bold; color:var(--accent-blue);">${hrs} hrs</span></div>`;
@@ -396,16 +388,11 @@
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                const dStr = d.toISOString().split('T')[0];
-                dateMap[dStr] = 0;
+                dateMap[d.toISOString().split('T')[0]] = 0;
             }
-
             cachedSessions.forEach(s => {
-                if (dateMap[s.dateStr] !== undefined) {
-                    dateMap[s.dateStr] += (s.durationSec / 3600);
-                }
+                if (dateMap[s.dateStr] !== undefined) dateMap[s.dateStr] += (s.durationSec / 3600);
             });
-
             const labels = Object.keys(dateMap).map(dt => dt.slice(5));
             const dataVals = Object.values(dateMap);
 
@@ -416,10 +403,9 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Hours',
                         data: dataVals,
-                        backgroundColor: '#38bdf8',
-                        borderRadius: 4
+                        backgroundColor: '#0ea5e9',
+                        borderRadius: 6
                     }]
                 },
                 options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
@@ -431,14 +417,9 @@
             cachedSessions.forEach(s => {
                 subjectMap[s.subject] = (subjectMap[s.subject] || 0) + (s.durationSec / 3600);
             });
-
             const labels = Object.keys(subjectMap);
             const dataVals = Object.values(subjectMap);
-
-            if (labels.length === 0) {
-                labels.push('No Data');
-                dataVals.push(1);
-            }
+            if (labels.length === 0) { labels.push('No Data'); dataVals.push(1); }
 
             if (myChartInstance) myChartInstance.destroy();
             const ctx = document.getElementById('studyChart').getContext('2d');
@@ -448,26 +429,39 @@
                     labels: labels,
                     datasets: [{
                         data: dataVals,
-                        backgroundColor: ['#38bdf8', '#10b981', '#f59e0b', '#818cf8', '#ef4444']
+                        backgroundColor: ['#0ea5e9', '#10b981', '#fbbf24', '#a855f7', '#f43f5e']
                     }]
                 },
                 options: { responsive: true }
             });
         }
 
+        // Subject-wise Monthly Archive Breakdown
         function loadMonthlyArchive() {
-            const selectedMonth = document.getElementById('archiveMonthPicker').value;
+            const selectedMonth = document.getElementById('archiveMonthPicker').value; // YYYY-MM
             if (!selectedMonth) return;
 
-            let totalSec = 0;
+            let subMap = {};
+            let totalMonthSec = 0;
+
             cachedSessions.forEach(s => {
                 if (s.dateStr && s.dateStr.startsWith(selectedMonth)) {
-                    totalSec += s.durationSec;
+                    subMap[s.subject] = (subMap[s.subject] || 0) + s.durationSec;
+                    totalMonthSec += s.durationSec;
                 }
             });
 
-            const totalHrs = (totalSec / 3600).toFixed(1);
-            document.getElementById('monthlyArchiveResult').innerHTML = `💡 Total Study in <b>${selectedMonth}</b>: <span style="color:var(--accent-green); font-size:14px; font-weight:bold;">${totalHrs} Hours</span>`;
+            const resultContainer = document.getElementById('monthlyArchiveResult');
+            if (totalMonthSec === 0) {
+                resultContainer.innerHTML = `<span style="color: var(--accent-red);">No study records found for ${selectedMonth}</span>`;
+                return;
+            }
+
+            let html = `<div style="margin-bottom:6px; font-weight:bold; color:var(--accent-green);">Total: ${(totalMonthSec/3600).toFixed(1)} Hours</div>`;
+            for (const [sub, sec] of Object.entries(subMap)) {
+                html += `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #22324f;"><span>📖 ${sub}</span><span style="font-weight:bold; color:var(--accent-blue);">${(sec/3600).toFixed(1)} hrs</span></div>`;
+            }
+            resultContainer.innerHTML = html;
         }
 
         function saveSessionToCloud(durationSec, subject) {
@@ -525,7 +519,7 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const hrs = (data.weeklySec / 3600).toFixed(1);
-                    list.innerHTML += `<div class="list-item"><span>${rank++}. ${data.name}</span><span style="font-weight:bold;">${hrs}h</span></div>`;
+                    list.innerHTML += `<div class="list-item"><span>${rank++}. ${data.name}</span><span style="font-weight:bold; color:var(--accent-yellow);">${hrs}h</span></div>`;
                 });
             });
         }
