@@ -108,7 +108,7 @@
                     <div id="attendanceStatus" style="font-size: 14px; font-weight: bold; color: var(--accent-yellow); margin-top: 4px;">Checking status...</div>
                 </div>
                 <div id="attBtnContainer">
-                    <button onclick="libraryCheckIn()" id="checkInBtn" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>
+                    <button onclick="libraryCheckIn()" style="background: var(--accent-green); color: #060913; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer;">Check In</button>
                 </div>
             </div>
             <div id="libraryTimingInfo" style="font-size: 11px; color: var(--text-secondary);">In: -- | Out: --</div>
@@ -215,7 +215,7 @@
 
     <script>
         const firebaseConfig = {
-           apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
+             apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
   authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
   projectId: "sunny-smart-tracker-73c04",
   storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
@@ -228,11 +228,29 @@
         const db = firebase.firestore();
 
         let currentUser = null;
-        let timerState = { startTime: null, accumulatedSec: 0, isPaused: false, subject: 'Maths' };
         let timerInterval = null;
         let myChartInstance = null;
         let cachedSessions = [];
         let cachedAttendance = {};
+
+        // LocalStorage se timer state bachane ke liye taaki background mein band na ho
+        function getTimerState() {
+            return {
+                isRunning: localStorage.getItem('sunny_isRunning') === 'true',
+                startTime: parseInt(localStorage.getItem('sunny_startTime') || '0', 10),
+                accumulatedSec: parseInt(localStorage.getItem('sunny_accumulatedSec') || '0', 10),
+                isPaused: localStorage.getItem('sunny_isPaused') === 'true',
+                subject: localStorage.getItem('sunny_subject') || 'Maths'
+            };
+        }
+
+        function saveTimerState(state) {
+            localStorage.setItem('sunny_isRunning', state.isRunning);
+                localStorage.setItem('sunny_startTime', state.startTime);
+            localStorage.setItem('sunny_accumulatedSec', state.accumulatedSec);
+            localStorage.setItem('sunny_isPaused', state.isPaused);
+            localStorage.setItem('sunny_subject', state.subject);
+        }
 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -241,6 +259,7 @@
                 document.getElementById('userEmail').innerText = user.displayName || user.email;
                 loadAllUserData();
                 fetchLeaderboard();
+                checkAndRestoreTimer();
             } else {
                 document.getElementById('authOverlay').style.display = 'flex';
             }
@@ -253,47 +272,101 @@
 
         function logout() { auth.signOut(); }
 
+        // Background-Proof Timer Recovery on Load/Visibility Change
+        function checkAndRestoreTimer() {
+            const state = getTimerState();
+            if (state.isRunning && !state.isPaused) {
+                document.getElementById('subjectSelect').value = state.subject;
+                document.getElementById('subjectSelect').disabled = true;
+                runLoop();
+                toggleControls(true);
+            } else if (state.isPaused) {
+                document.getElementById('subjectSelect').value = state.subject;
+                document.getElementById('subjectSelect').disabled = true;
+                let current = state.accumulatedSec;
+                document.getElementById('timerDisplay').innerText = formatHHMMSS(current);
+                toggleControls(false, true);
+            }
+        }
+
+        // Jab user doosre app se wapas is app par aaye, tab turant time recalculate karo
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                const state = getTimerState();
+                if (state.isRunning && !state.isPaused) {
+                    runLoop(); // turant sync kar lo
+                }
+            }
+        });
+
         function startTimer() {
-            timerState.subject = document.getElementById('subjectSelect').value;
-            timerState.startTime = Date.now();
-            timerState.isPaused = false;
+            let state = getTimerState();
+            if (!state.isRunning) {
+                state.subject = document.getElementById('subjectSelect').value;
+                state.startTime = Date.now();
+                state.isRunning = true;
+                state.isPaused = false;
+                state.accumulatedSec = state.accumulatedSec || 0;
+                saveTimerState(state);
+            } else if (state.isPaused) {
+                // Resume from pause
+                state.startTime = Date.now();
+                state.isPaused = false;
+                state.isRunning = true;
+                saveTimerState(state);
+            }
+
+            document.getElementById('subjectSelect').disabled = true;
             runLoop();
             toggleControls(true);
         }
 
         function pauseTimer() {
-            const elapsed = Math.floor((Date.now() - timerState.startTime) / 1000);
-            timerState.accumulatedSec += elapsed;
-            timerState.isPaused = true;
-            timerState.startTime = null;
+            let state = getTimerState();
+            if (state.isRunning && !state.isPaused) {
+                const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+                state.accumulatedSec += elapsed;
+                state.isPaused = true;
+                state.isRunning = false;
+                state.startTime = 0;
+                saveTimerState(state);
+            }
             clearInterval(timerInterval);
             toggleControls(false, true);
         }
 
         function stopTimer() {
-            let totalSec = timerState.accumulatedSec;
-            if (!timerState.isPaused && timerState.startTime) {
-                totalSec += Math.floor((Date.now() - timerState.startTime) / 1000);
+            let state = getTimerState();
+            let totalSec = state.accumulatedSec;
+            if (state.isRunning && !state.isPaused && state.startTime) {
+                totalSec += Math.floor((Date.now() - state.startTime) / 1000);
             }
 
             if (totalSec > 5) {
-                saveSessionToCloud(totalSec, timerState.subject);
+                saveSessionToCloud(totalSec, state.subject);
             }
 
+            // Clear storage
+            localStorage.removeItem('sunny_isRunning');
+            localStorage.removeItem('sunny_startTime');
+            localStorage.removeItem('sunny_accumulatedSec');
+            localStorage.removeItem('sunny_isPaused');
+            localStorage.removeItem('sunny_subject');
+
             clearInterval(timerInterval);
-            timerState = { startTime: null, accumulatedSec: 0, isPaused: false, subject: 'Maths' };
             document.getElementById('timerDisplay').innerText = "00:00:00";
+            document.getElementById('subjectSelect').disabled = false;
             toggleControls(false);
         }
 
         function runLoop() {
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(() => {
-                let current = timerState.accumulatedSec;
-                if (!timerState.isPaused && timerState.startTime) {
-                    current += Math.floor((Date.now() - timerState.startTime) / 1000);
+                let state = getTimerState();
+                if (state.isRunning && !state.isPaused && state.startTime) {
+                    let current = state.accumulatedSec + Math.floor((Date.now() - state.startTime) / 1000);
+                    document.getElementById('timerDisplay').innerText = formatHHMMSS(current);
                 }
-                document.getElementById('timerDisplay').innerText = formatHHMMSS(current);
             }, 1000);
         }
 
@@ -482,9 +555,8 @@
             });
         }
 
-        // Month-wise Attendance Archive
         function loadMonthlyAttendanceArchive() {
-            const selectedMonth = document.getElementById('attArchiveMonthPicker').value; // YYYY-MM
+            const selectedMonth = document.getElementById('attArchiveMonthPicker').value;
             if (!selectedMonth) return;
 
             let presentDaysCount = 0;
@@ -507,9 +579,8 @@
             resultContainer.innerHTML = `<div style="margin-bottom:8px; font-weight:bold; color:var(--accent-yellow);">Total Present Days: ${presentDaysCount} Days</div>` + html;
         }
 
-        // Subject-wise Monthly Study Archive
         function loadMonthlyStudyArchive() {
-            const selectedMonth = document.getElementById('studyArchiveMonthPicker').value; // YYYY-MM
+            const selectedMonth = document.getElementById('studyArchiveMonthPicker').value;
             if (!selectedMonth) return;
 
             let subMap = {};
