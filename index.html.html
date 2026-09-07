@@ -102,9 +102,17 @@
             </div>
         </div>
 
+        <!-- Daily Target Progress Box with Custom Input -->
         <div class="card card-full">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span class="card-label">Daily Target Progress</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <input type="number" id="targetHoursInput" min="1" max="24" value="6" style="width: 45px; background: #0f172a; color: white; border: 1px solid var(--border-card); padding: 2px 4px; border-radius: 4px; font-size: 12px;">
+                    <span style="font-size: 11px; color: var(--text-secondary);">hrs</span>
+                    <button onclick="saveDailyTarget()" style="background: var(--accent-blue); color: #0f172a; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer;">Set</button>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
                 <span id="targetText" style="font-size: 11px; color: var(--accent-blue);">Target: 6 hrs</span>
             </div>
             <div class="progress-track"><div class="progress-fill" id="targetBar"></div></div>
@@ -137,14 +145,14 @@
     </div>
 
     <script>
-        // Firebase Setup Configuration
+        // Firebase Setup Configuration (Apni original keys yahan daal dein)
         const firebaseConfig = {
-            apiKey: "AIzaSyCXicZjVTxQZhrArisjYt3z1-KxDeDZbX4",
-  authDomain: "sunny-smart-tracker-73c04.firebaseapp.com",
-  projectId: "sunny-smart-tracker-73c04",
-  storageBucket: "sunny-smart-tracker-73c04.firebasestorage.app",
-  messagingSenderId: "1049812610355",
-  appId: "1:1049812610355:web:e1859969900334680f6246"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -231,6 +239,14 @@
             document.getElementById('stopBtn').disabled = !running && !paused;
         }
 
+        // Daily Target Save Logic
+        function saveDailyTarget() {
+            const hrs = document.getElementById('targetHoursInput').value;
+            if (!hrs || hrs <= 0) return;
+            localStorage.setItem('userDailyTargetHrs', hrs);
+            loadUserData();
+        }
+
         // Exam Target Countdown Logic
         function saveExamTarget() {
             const selectedDate = document.getElementById('examDatePicker').value;
@@ -275,6 +291,10 @@
         }
 
         function loadUserData() {
+            const customTargetHrs = localStorage.getItem('userDailyTargetHrs') || 6;
+            document.getElementById('targetHoursInput').value = customTargetHrs;
+            document.getElementById('targetText').innerText = `Target: ${customTargetHrs} hrs`;
+
             const todayStr = new Date().toISOString().split('T')[0];
             db.collection('users').doc(currentUser.uid).collection('sessions')
               .where('dateStr', '==', todayStr)
@@ -285,7 +305,7 @@
                   const hours = (totalToday / 3600).toFixed(1);
                   document.getElementById('dashToday').innerText = `${hours}h`;
                   
-                  const targetSec = 6 * 3600;
+                  const targetSec = customTargetHrs * 3600;
                   const pct = Math.min(100, Math.round((totalToday / targetSec) * 100));
                   document.getElementById('targetBar').style.width = pct + '%';
               });
@@ -306,7 +326,7 @@
         }
 
         function fetchLeaderboard() {
-            db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().then(snapshot => {
+            db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().top?.forEach || db.collection('leaderboard').orderBy('weeklySec', 'desc').limit(5).get().then(snapshot => {
                 const list = document.getElementById('leaderboardList');
                 list.innerHTML = '';
                 let rank = 1;
